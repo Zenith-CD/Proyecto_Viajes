@@ -1,0 +1,46 @@
+{% extends 'FrontEnd/base.html' %}
+{% block title %}Personas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Personas</h2>
+  <a href="{% url 'form_persona' %}" class="btn btn-primary" id="btn-nuevo">Nueva persona</a>
+</div>
+<div id="msg"></div>
+<div class="table-responsive">
+<table class="table table-striped bg-white align-middle">
+  <thead><tr><th>Foto</th><th>RUT</th><th>Nombre</th><th>Email</th><th>Nacimiento</th><th>Viajes</th><th class="col-acc"></th></tr></thead>
+  <tbody id="tabla"></tbody>
+</table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function cargar() {
+  try {
+    const data = await apiFetch('/personas/');
+    document.getElementById('tabla').innerHTML = data.map(p => `
+      <tr>
+        <td>${p.foto ? `<img src="${p.foto}" width="48" height="48" class="rounded-circle" style="object-fit:cover">` : '—'}</td>
+        <td>${esc(p.rut)}</td>
+        <td>${esc(p.nombre)} ${esc(p.apellido)}</td>
+        <td>${esc(p.email)}</td>
+        <td>${esc(p.fecha_nacimiento)}</td>
+        <td>${p.cantidad_viajes}</td>
+        <td class="col-acc">${LOGUEADO ? `
+          <a href="/personas/${p.id}/editar/" class="btn btn-sm btn-warning">Editar</a>
+          <button class="btn btn-sm btn-danger" onclick="eliminar(${p.id})">Eliminar</button>` : ''}</td>
+      </tr>`).join('');
+  } catch (err) { mostrarErrores(err, document.getElementById('msg')); }
+}
+async function eliminar(id) {
+  if (!confirm('¿Eliminar esta persona? También se eliminarán sus viajes.')) return;
+  try { await apiFetch(`/personas/${id}/`, { method: 'DELETE' }); cargar(); }
+  catch (err) { mostrarErrores(err, document.getElementById('msg')); }
+}
+if (!LOGUEADO) {
+  document.getElementById('btn-nuevo').classList.add('d-none');
+  document.querySelectorAll('.col-acc').forEach(e => e.classList.add('d-none'));
+}
+cargar();
+</script>
+{% endblock %}

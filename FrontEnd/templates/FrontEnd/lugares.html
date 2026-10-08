@@ -1,0 +1,40 @@
+{% extends 'FrontEnd/base.html' %}
+{% block title %}Lugares{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Lugares</h2>
+  <a href="{% url 'form_lugar' %}" class="btn btn-primary" id="btn-nuevo">Nuevo lugar</a>
+</div>
+<div id="msg"></div>
+<div class="row g-3" id="lista"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function cargar() {
+  try {
+    const data = await apiFetch('/lugares/');
+    document.getElementById('lista').innerHTML = data.map(l => `
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+          ${l.foto ? `<img src="${l.foto}" class="card-img-top" style="height:180px;object-fit:cover">` : ''}
+          <div class="card-body">
+            <h5>${esc(l.nombre)}</h5>
+            <p class="small text-muted">${esc(l.ciudad)}, ${esc(l.pais)} · ${l.cantidad_visitas} visita(s)</p>
+            <p>${esc(l.descripcion.substring(0, 120))}...</p>
+            ${LOGUEADO ? `
+              <a href="/lugares/${l.id}/editar/" class="btn btn-sm btn-warning">Editar</a>
+              <button class="btn btn-sm btn-danger" onclick="eliminar(${l.id})">Eliminar</button>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (err) { mostrarErrores(err, document.getElementById('msg')); }
+}
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este lugar? También se eliminarán sus viajes.')) return;
+  try { await apiFetch(`/lugares/${id}/`, { method: 'DELETE' }); cargar(); }
+  catch (err) { mostrarErrores(err, document.getElementById('msg')); }
+}
+if (!LOGUEADO) document.getElementById('btn-nuevo').classList.add('d-none');
+cargar();
+</script>
+{% endblock %}

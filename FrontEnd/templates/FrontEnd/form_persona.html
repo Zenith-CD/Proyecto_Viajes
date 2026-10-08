@@ -1,0 +1,52 @@
+{% extends 'FrontEnd/base.html' %}
+{% block title %}Formulario de persona{% endblock %}
+{% block content %}
+<h2 id="titulo">Nueva persona</h2>
+<div id="msg"></div>
+<div id="datos" data-pk="{{ pk|default:'' }}" hidden></div> <!-- <--- correccion -->
+<form id="form" class="card card-body shadow-sm" enctype="multipart/form-data">
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label">RUT (12345678-9)</label>
+      <input class="form-control" name="rut" required pattern="\d{7,8}-[\dkK]"></div>
+    <div class="col-md-6"><label class="form-label">Email</label>
+      <input type="email" class="form-control" name="email" required></div>
+    <div class="col-md-6"><label class="form-label">Nombre</label>
+      <input class="form-control" name="nombre" required></div>
+    <div class="col-md-6"><label class="form-label">Apellido</label>
+      <input class="form-control" name="apellido" required></div>
+    <div class="col-md-6"><label class="form-label">Fecha de nacimiento</label>
+      <input type="date" class="form-control" name="fecha_nacimiento" required></div>
+    <div class="col-md-6"><label class="form-label">Foto (opcional)</label>
+      <input type="file" class="form-control" name="foto" accept="image/*"></div>
+  </div>
+  <div class="mt-3">
+    <button class="btn btn-primary">Guardar</button>
+    <a href="{% url 'personas' %}" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const PK = Number(document.getElementById('datos').dataset.pk) || null; // <--- correccion
+const form = document.getElementById('form');
+const msg = document.getElementById('msg');
+
+if (!Auth.isLoggedIn()) window.location.href = '/login/';
+
+if (PK) {
+  document.getElementById('titulo').textContent = 'Editar persona';
+  apiFetch(`/personas/${PK}/`).then(d => llenarForm(form, d)).catch(e => mostrarErrores(e, msg));
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(form);
+  const foto = fd.get('foto');
+  if (!foto || foto.size === 0) fd.delete('foto'); // no enviar foto vacía
+  try {
+    await apiFetch(PK ? `/personas/${PK}/` : '/personas/', { method: PK ? 'PUT' : 'POST', body: fd });
+    window.location.href = '/personas/';
+  } catch (err) { mostrarErrores(err, msg); }
+});
+</script>
+{% endblock %}

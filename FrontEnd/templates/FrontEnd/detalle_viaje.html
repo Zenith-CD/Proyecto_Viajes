@@ -1,0 +1,50 @@
+{% extends 'FrontEnd/base.html' %}
+{% block title %}Detalle del viaje{% endblock %}
+{% block content %}
+<div id="msg"></div>
+<div id="datos" data-pk="{{ pk }}" hidden></div> <!-- <--- correccion -->
+<div id="detalle"></div>
+<a href="{% url 'blog' %}" class="btn btn-link mt-3">&larr; Volver</a>
+{% endblock %}
+{% block scripts %}
+<script>
+const PK = Number(document.getElementById('datos').dataset.pk); // <--- correccion
+const cont = document.getElementById('detalle');
+
+async function cargar() {
+  try {
+    const v = await apiFetch(`/viajes/${PK}/`);
+    cont.innerHTML = `
+      <div class="card shadow-sm">
+        ${v.foto ? `<img src="${v.foto}" class="card-img-top" style="max-height:400px;object-fit:cover">` : ''}
+        <div class="card-body">
+          <h2>${esc(v.titulo)}</h2>
+          <p class="text-warning fs-5">${estrellas(v.calificacion)}</p>
+          <p class="text-muted">
+            Por <strong>${esc(v.persona_detalle.nombre)} ${esc(v.persona_detalle.apellido)}</strong> ·
+            ${esc(v.lugar_detalle.nombre)}, ${esc(v.lugar_detalle.ciudad)} (${esc(v.lugar_detalle.pais)}) ·
+            Visitado el ${esc(v.fecha_visita)}
+          </p>
+          <p style="white-space:pre-line">${esc(v.relato)}</p>
+          ${LOGUEADO ? `
+            <a href="/viajes/${v.id}/editar/" class="btn btn-warning">Editar</a>
+            <button class="btn btn-danger" onclick="eliminar()">Eliminar</button>` : ''}
+        </div>
+      </div>`;
+  } catch (err) {
+    mostrarErrores(err, document.getElementById('msg'));
+  }
+}
+
+async function eliminar() {
+  if (!confirm('¿Eliminar este viaje?')) return;
+  try {
+    await apiFetch(`/viajes/${PK}/`, { method: 'DELETE' });
+    window.location.href = '/';
+  } catch (err) {
+    mostrarErrores(err, document.getElementById('msg'));
+  }
+}
+cargar();
+</script>
+{% endblock %}

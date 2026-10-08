@@ -1,0 +1,66 @@
+{% extends 'FrontEnd/base.html' %}
+{% block title %}Blog de viajes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Blog de viajes</h2>
+  <a href="{% url 'form_viaje' %}" class="btn btn-primary" id="btn-nuevo">Nuevo viaje</a>
+</div>
+
+<div class="row g-2 mb-4">
+  <div class="col-md-4"><select id="f-lugar" class="form-select"><option value="">Todos los lugares</option></select></div>
+  <div class="col-md-4"><select id="f-persona" class="form-select"><option value="">Todas las personas</option></select></div>
+</div>
+
+<div id="msg"></div>
+<div class="row g-3" id="lista"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const lista = document.getElementById('lista');
+const fLugar = document.getElementById('f-lugar');
+const fPersona = document.getElementById('f-persona');
+
+async function cargarFiltros() {
+  const [lugares, personas] = await Promise.all([apiFetch('/lugares/'), apiFetch('/personas/')]);
+  lugares.forEach(l => fLugar.insertAdjacentHTML('beforeend', `<option value="${l.id}">${esc(l.nombre)}</option>`));
+  personas.forEach(p => fPersona.insertAdjacentHTML('beforeend', `<option value="${p.id}">${esc(p.nombre)} ${esc(p.apellido)}</option>`));
+}
+
+async function cargarViajes() {
+  const params = new URLSearchParams();
+  if (fLugar.value) params.set('lugar', fLugar.value);
+  if (fPersona.value) params.set('persona', fPersona.value);
+  const qs = params.toString() ? `?${params}` : '';
+  try {
+    const viajes = await apiFetch(`/viajes/${qs}`);
+    if (!viajes.length) {
+      lista.innerHTML = '<p class="text-muted">No hay viajes registrados.</p>';
+      return;
+    }
+    lista.innerHTML = viajes.map(v => `
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+          ${v.foto ? `<img src="${v.foto}" class="card-img-top" style="height:200px;object-fit:cover">` : ''}
+          <div class="card-body">
+            <h5 class="card-title">${esc(v.titulo)}</h5>
+            <p class="mb-1 text-warning">${estrellas(v.calificacion)}</p>
+            <p class="small text-muted mb-2">
+              ${esc(v.persona_detalle.nombre)} ${esc(v.persona_detalle.apellido)} ·
+              ${esc(v.lugar_detalle.nombre)} (${esc(v.lugar_detalle.ciudad)}) · ${esc(v.fecha_visita)}
+            </p>
+            <p class="card-text">${esc(v.relato.substring(0, 120))}...</p>
+            <a href="/viaje/${v.id}/" class="btn btn-sm btn-outline-primary">Ver detalle</a>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (err) {
+    mostrarErrores(err, document.getElementById('msg'));
+  }
+}
+
+fLugar.addEventListener('change', cargarViajes);
+fPersona.addEventListener('change', cargarViajes);
+if (!LOGUEADO) document.getElementById('btn-nuevo').classList.add('d-none');
+cargarFiltros().then(cargarViajes);
+</script>
+{% endblock %}
